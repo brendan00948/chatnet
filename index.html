@@ -270,20 +270,11 @@
         .chat-input-container {
             display: flex;
             gap: 10px;
-            align-items: center;
         }
 
         .chat-input-container input {
             flex: 1;
             margin-bottom: 0;
-            padding: 10px 15px;
-            height: 45px;
-        }
-
-        .chat-input-container button {
-            width: auto;
-            padding: 10px 15px;
-            height: 45px;
         }
 
         .sidebar {
@@ -607,19 +598,6 @@
             background-color: #f72585;
         }
 
-        .status-dot.connecting {
-            background-color: #f8961e;
-        }
-
-        .typing-indicator {
-            font-style: italic;
-            color: var(--gray);
-            padding: 5px 10px;
-            margin-bottom: 10px;
-            background: #f0f0f0;
-            border-radius: 5px;
-        }
-
         @media (max-width: 768px) {
             .chat-container {
                 grid-template-columns: 1fr;
@@ -646,9 +624,9 @@
                 <div class="profile-icon-container" onclick="showProfileModal()" id="profile-icon-container" style="display: none;">
                     <img id="header-profile-pic" class="profile-icon" src="" alt="Profile">
                 </div>
-                <div class="connection-status" id="connection-status">
-                    <span class="status-dot connecting"></span>
-                    <span>Connecting...</span>
+                <div class="connection-status">
+                    <span class="status-dot connected"></span>
+                    <span>Connected</span>
                 </div>
             </div>
         </div>
@@ -866,7 +844,6 @@
                     <div class="panel-section">
                         <h3><i class="fas fa-comment-dots"></i> Live Chat Messages</h3>
                         <div id="chat-messages" class="chat-messages"></div>
-                        <div id="typing-indicator" class="typing-indicator" style="display: none;"></div>
                         <div class="chat-input-container">
                             <input type="text" id="chat-input" placeholder="Type your message..." required>
                             <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
@@ -1033,242 +1010,415 @@
     </div>
 
     <footer>
-        <p>Chatnet - Live Global Chat System &copy; 2025</p>
+        <p>Chatnet - Live Global Chat System &copy; 2023</p>
     </footer>
 
     <script>
-        // WebSocket connection for real-time chat
-        let socket;
+        // Simulated user database (in a real app, this would be on a server)
+        let registeredCredentials = JSON.parse(localStorage.getItem('registeredCredentials')) || {}; 
+        let generatedNumbers = JSON.parse(localStorage.getItem('generatedNumbers')) || []; 
+        let chatMessages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+        let announcements = JSON.parse(localStorage.getItem('announcements')) || [];
         let currentUser = null;
-        let onlineUsers = [];
-        let chatMessages = [];
-        let announcements = [];
-        let generatedNumbers = [];
-        let registeredCredentials = {};
+        const ownerPassword = "Bb66896769"; // Owner password
+        const adminPassword = "admin123"; // Admin password
+        const moderatorPassword = "mod123"; // Moderator password
+        const ownerInviteCode = "Bb66896769"; // Invite code for owner role
 
-        // Initialize WebSocket connection
-        function initWebSocket() {
-            try {
-                // Connect to a real WebSocket server
-                // For demonstration purposes, we'll use a mock server
-                // In production, replace with your actual WebSocket server URL
-                socket = new WebSocket('wss://echo.websocket.org');
-                
-                // Connection opened
-                socket.addEventListener('open', function (event) {
-                    updateConnectionStatus('connected');
-                    console.log('Connected to WebSocket server');
-                    
-                    // Simulate initial data after connection
-                    setTimeout(() => {
-                        simulateInitialData();
-                    }, 1000);
-                });
-                
-                // Listen for messages
-                socket.addEventListener('message', function (event) {
-                    console.log('Message from server:', event.data);
-                    try {
-                        const message = JSON.parse(event.data);
-                        handleServerMessage(message);
-                    } catch (e) {
-                        console.error('Error parsing message:', e);
-                    }
-                });
-                
-                // Connection closed
-                socket.addEventListener('close', function (event) {
-                    updateConnectionStatus('disconnected');
-                    console.log('WebSocket connection closed');
-                });
-                
-                // Connection error
-                socket.addEventListener('error', function (event) {
-                    updateConnectionStatus('disconnected');
-                    console.error('WebSocket error:', event);
-                });
-                
-            } catch (error) {
-                console.error('WebSocket connection failed: ', error);
-                updateConnectionStatus('disconnected');
-            }
-        }
-
-        // Update connection status indicator
-        function updateConnectionStatus(status) {
-            const statusElement = document.getElementById('connection-status');
-            const dotElement = statusElement.querySelector('.status-dot');
-            const textElement = statusElement.querySelector('span');
-            
-            dotElement.className = 'status-dot ' + status;
-            
-            switch(status) {
-                case 'connecting': 
-                    textElement.textContent = 'Connecting...';
-                    break;
-                case 'connected': 
-                    textElement.textContent = 'Connected';
-                    break;
-                case 'disconnected': 
-                    textElement.textContent = 'Disconnected';
-                    break;
-            }
-        }
-
-        // Handle messages from server
-        function handleServerMessage(message) {
-            switch(message.type) {
-                case 'user_list': 
-                    onlineUsers = message.users;
-                    displayOnlineUsers();
-                    updateOnlineUsers();
-                    break;
-                case 'chat_message': 
-                    addMessageToChat(message.data);
-                    break;
-                case 'user_joined': 
-                    onlineUsers.push(message.user);
-                    displayOnlineUsers();
-                    updateOnlineUsers();
-                    break;
-                case 'user_left': 
-                    onlineUsers = onlineUsers.filter(user => user.username !== message.username);
-                    displayOnlineUsers();
-                    updateOnlineUsers();
-                    break;
-                case 'announcements': 
-                    announcements = message.data;
-                    displayAnnouncements();
-                    break;
-                case 'typing': 
-                    showTypingIndicator(message.username);
-                    break;
-                case 'stop_typing': 
-                    hideTypingIndicator();
-                    break;
-            }
-        }
-
-        // Simulate initial data from server
-        function simulateInitialData() {
-            // Simulate online users
-            onlineUsers = [
-                {username: "Brendan", role: "owner"}, 
-                {username: "Admin", role: "admin"}, 
-                {username: "Moderator", role: "moderator"}, 
-                {username: "Alice", role: "user"}, 
-                {username: "Bob", role: "user"}
-            ];
-            
-            // Simulate chat messages
-            chatMessages = [
-                {name: "Brendan", message: "Welcome to Chatnet!", date: new Date().toLocaleString(), profilePic: "https://i.pravatar.cc/150?img=1"}, 
-                {name: "Admin", message: "Please follow the community guidelines", date: new Date().toLocaleString(), profilePic: "https://i.pravatar.cc/150?img=2"}, 
-                {name: "Alice", message: "Hello everyone!", date: new Date().toLocaleString(), profilePic: "https://i.pravatar.cc/150?img=4"}
-            ];
-            
-            // Simulate announcements
-            announcements = [
-                {title: "System Update", content: "We've improved the chat performance", author: "Brendan", date: new Date().toLocaleString()}, 
-                {title: "New Features", content: "Check out the new number generator!", author: "Admin", date: new Date().toLocaleString()}
-            ];
-            
-            // Simulate generated numbers
-            generatedNumbers = [
-                {value: 42, timestamp: new Date().toLocaleString(), user: "Brendan"}, 
-                {value: 73, timestamp: new Date().toLocaleString(), user: "Alice"}
-            ];
-            
-            // Simulate registered users
+        // Initialize default users if not present
+        if (Object.keys(registeredCredentials).length === 0) {
             registeredCredentials = {
-                "Brendan": {password: "Bb66896769", profilePic: "https://i.pravatar.cc/150?img=1", role: "owner", banned: false, muted: false}, 
-                "Admin": {password: "admin123", profilePic: "https://i.pravatar.cc/150?img=2", role: "admin", banned: false, muted: false}, 
-                "Moderator": {password: "mod123", profilePic: "https://i.pravatar.cc/150?img=3", role: "moderator", banned: false, muted: false}, 
-                "Alice": {password: "alice123", profilePic: "https://i.pravatar.cc/150?img=4", role: "user", banned: false, muted: false}, 
-                "Bob": {password: "bob123", profilePic: "https://i.pravatar.cc/150?img=5", role: "user", banned: false, muted: false}
+                "Brendan": {
+                    password: ownerPassword, 
+                    profilePic: "https://i.pravatar.cc/150?img=1", 
+                    role: "owner", 
+                    banned: false, 
+                    muted: false
+                }, 
+                "Admin": {
+                    password: adminPassword, 
+                    profilePic: "https://i.pravatar.cc/150?img=2", 
+                    role: "admin", 
+                    banned: false, 
+                    muted: false
+                }, 
+                "Moderator": {
+                    password: moderatorPassword, 
+                    profilePic: "https://i.pravatar.cc/150?img=3", 
+                    role: "moderator", 
+                    banned: false, 
+                    muted: false
+                }
             };
-            
-            // Update UI
-            displayOnlineUsers();
-            updateOnlineUsers();
+            localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+        }
+
+        // Simulate online users (in a real app, this would come from server)
+        let onlineUsers = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            displayLoginOptions();
+            displayGeneratedNumbers(); 
             displayChatMessages();
             displayAnnouncements();
-            displayGeneratedNumbers();
+            updateOnlineUsers();
+        });
+
+        // Simulate live updates
+        setInterval(function() {
+            updateOnlineUsers();
             updateStats();
+        }, 5000);
+
+        function displayLoginOptions() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('login-options').classList.add('active');
+            document.getElementById('profile-icon-container').style.display = 'none';
         }
 
-        // Add message to chat display
-        function addMessageToChat(message) {
-            chatMessages.push(message);
-            displayChatMessages();
+        function displayStaffLogin() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('staff-login-form').classList.add('active');
+            document.getElementById('staff-login-error').style.display = 'none';
+            document.getElementById('profile-icon-container').style.display = 'none';
         }
 
-        // Show typing indicator
-        function showTypingIndicator(username) {
-            const indicator = document.getElementById('typing-indicator');
-            indicator.textContent = `${username} is typing...`;
-            indicator.style.display = 'block';
-            
-            // Auto-hide after 3 seconds
-            setTimeout(() => {
-                if (indicator.textContent === `${username} is typing...`) {
-                    indicator.style.display = 'none';
+        function displayUserLogin() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('user-login-form').classList.add('active');
+            document.getElementById('user-login-error').style.display = 'none';
+            document.getElementById('profile-icon-container').style.display = 'none';
+        }
+
+        function displayRegistrationForm() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('registration-form').classList.add('active');
+            document.getElementById('reg-error').style.display = 'none';
+            document.getElementById('reg-success').style.display = 'none';
+            document.getElementById('profile-icon-container').style.display = 'none';
+        }
+
+        function staffLogin() {
+            const username = document.getElementById('staff-username').value.trim();
+            const password = document.getElementById('staff-password').value;
+            const errorDiv = document.getElementById('staff-login-error');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'Please enter both username and password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (registeredCredentials[username] && registeredCredentials[username].password === password) {
+                const userRole = registeredCredentials[username].role;
+                if (userRole === "owner" || userRole === "admin" || userRole === "moderator") {
+                    currentUser = username;
+                    displayWelcomeMessage(username);
+                    loadProfilePicture(username);
+                    
+                    // Show appropriate panel based on role
+                    if (userRole === "owner") {
+                        document.getElementById('owner-panel').style.display = 'block';
+                        document.getElementById('staff-portal').style.display = 'block';
+                    } else if (userRole === "admin") {
+                        document.getElementById('admin-panel').style.display = 'block';
+                        document.getElementById('staff-portal').style.display = 'block';
+                    } else if (userRole === "moderator") {
+                        document.getElementById('moderator-panel').style.display = 'block';
+                        document.getElementById('staff-portal').style.display = 'block';
+                    }
+                    
+                    // FIX 1: Give staff access to chat immediately after login
+                    displayChatContainer();
+                    
+                    refreshStats();
+                    updateOnlineUsers();
+                } else {
+                    errorDiv.textContent = 'Insufficient privileges for staff portal';
+                    errorDiv.style.display = 'block';
                 }
-            }, 3000);
-        }
-
-        // Hide typing indicator
-        function hideTypingIndicator() {
-            document.getElementById('typing-indicator').style.display = 'none';
-        }
-
-        // Send typing indicator to server
-        function sendTypingIndicator() {
-            if (currentUser && socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({
-                    type: 'typing', 
-                    username: currentUser
-                }));
-                
-                // Send stop typing after 2 seconds of inactivity
-                clearTimeout(window.typingTimeout);
-                window.typingTimeout = setTimeout(() => {
-                    socket.send(JSON.stringify({
-                        type: 'stop_typing', 
-                        username: currentUser
-                    }));
-                }, 2000);
+            } else {
+                errorDiv.textContent = 'Invalid credentials, please try again.';
+                errorDiv.style.display = 'block';
             }
         }
 
-        // Send message to server
+        function userLogin() {
+            const username = document.getElementById('user-username').value.trim();
+            const password = document.getElementById('user-password').value;
+            const errorDiv = document.getElementById('user-login-error');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'Please enter both username and password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (registeredCredentials[username] && registeredCredentials[username].password === password) {
+                // Check if user is banned
+                if (registeredCredentials[username].banned) {
+                    const banInfo = registeredCredentials[username].banInfo || {};
+                    const banMessage = banInfo.reason ? 
+                        `Your account has been banned. Reason: ${banInfo.reason}` : 
+                        'Your account has been banned.';
+                    errorDiv.textContent = banMessage;
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Check if user is muted
+                if (registeredCredentials[username].muted) {
+                    alert('You are muted and cannot send messages.');
+                }
+                
+                currentUser = username;
+                displayWelcomeMessage(username);
+                loadProfilePicture(username);
+                displayChatContainer();
+                errorDiv.style.display = 'none';
+                updateOnlineUsers();
+            } else {
+                errorDiv.textContent = 'Invalid credentials, please try again.';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function register() {
+            const regUsername = document.getElementById('reg-username').value.trim();
+            const regPassword = document.getElementById('reg-password').value;
+            const inviteCode = document.getElementById('invite-code').value.trim();
+            const profilePicture = document.getElementById('profile-picture').files[0];
+            const errorDiv = document.getElementById('reg-error');
+            const successDiv = document.getElementById('reg-success');
+
+            // Reset messages
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            if (!regUsername || !regPassword) {
+                errorDiv.textContent = 'Please enter both username and password';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (regUsername.length < 3) {
+                errorDiv.textContent = 'Username must be at least 3 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (regPassword.length < 6) {
+                errorDiv.textContent = 'Password must be at least 6 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (!profilePicture) {
+                errorDiv.textContent = 'Please select a profile picture';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (registeredCredentials[regUsername]) {
+                errorDiv.textContent = 'Username is already taken, please choose a different one.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Determine role based on invite code
+            let role = "user";
+            if (inviteCode === ownerInviteCode) {
+                role = "owner";
+            }
+
+            // Read profile picture as data URL
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const profilePicURL = e.target.result;
+                registeredCredentials[regUsername] = { 
+                    password: regPassword, 
+                    profilePic: profilePicURL, 
+                    role: role, 
+                    banned: false, 
+                    muted: false
+                };
+                
+                // Save to localStorage
+                localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                
+                successDiv.textContent = 'Registration successful! You can now log in.';
+                successDiv.style.display = 'block';
+                
+                // Clear form
+                document.getElementById('reg-username').value = '';
+                document.getElementById('reg-password').value = '';
+                document.getElementById('invite-code').value = '';
+                document.getElementById('profile-picture').value = '';
+                
+                // Switch to login options after delay
+                setTimeout(displayLoginOptions, 2000);
+            };
+            
+            reader.readAsDataURL(profilePicture);
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('profile-icon-container').style.display = 'none';
+            document.getElementById('owner-panel').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('moderator-panel').style.display = 'none';
+            document.getElementById('staff-portal').style.display = 'none';
+            displayLoginOptions();
+            updateOnlineUsers();
+        }
+
+        function displayWelcomeMessage(username) {
+            document.getElementById('user').innerText = username;
+            document.getElementById('user-role').innerText = registeredCredentials[username].role;
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('welcome-message').classList.add('active');
+            loadProfilePicture(username);
+            
+            // Show profile icon in header
+            document.getElementById('profile-icon-container').style.display = 'block';
+            loadHeaderProfilePicture(username);
+            
+            // Show role-specific panels
+            const userRole = registeredCredentials[username].role;
+            if (userRole === "owner") {
+                document.getElementById('owner-panel').style.display = 'block';
+                document.getElementById('staff-portal').style.display = 'block';
+            } else if (userRole === "admin") {
+                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('staff-portal').style.display = 'block';
+            } else if (userRole === "moderator") {
+                document.getElementById('moderator-panel').style.display = 'block';
+                document.getElementById('staff-portal').style.display = 'block';
+            }
+            
+            // FIX 1: Ensure staff get chat access when returning to welcome screen
+            if (userRole === "owner" || userRole === "admin" || userRole === "moderator") {
+                displayChatContainer();
+            }
+            
+            refreshStats();
+            updateOnlineUsers();
+        }
+
+        function loadProfilePicture(username) {
+            const profilePicURL = registeredCredentials[username].profilePic;
+            const profilePic = document.getElementById('profile-pic');
+            profilePic.src = profilePicURL;
+        }
+
+        function loadHeaderProfilePicture(username) {
+            const profilePicURL = registeredCredentials[username].profilePic;
+            const profilePic = document.getElementById('header-profile-pic');
+            profilePic.src = profilePicURL;
+        }
+
+        function loadModalProfilePicture(username) {
+            const profilePicURL = registeredCredentials[username].profilePic;
+            const profilePic = document.getElementById('modal-profile-pic');
+            profilePic.src = profilePicURL;
+        }
+
+        function displayChatContainer() {
+            document.getElementById('chat-container').classList.add('active');
+            displayOnlineUsers();
+            updateOnlineUsers();
+        }
+
+        function generateNumber() {
+            const randomNumber = Math.floor(Math.random() * 100) + 1;
+            document.getElementById('random-number').innerText = randomNumber;
+            saveGeneratedNumber(randomNumber);
+        }
+
+        function generateNumberInPortal() {
+            const randomNumber = Math.floor(Math.random() * 100) + 1;
+            document.getElementById('random-number').innerText = randomNumber;
+            saveGeneratedNumber(randomNumber);
+            displayGeneratedNumbers();
+        }
+
+        function saveGeneratedNumber(number) {
+            generatedNumbers.push({
+                value: number, 
+                timestamp: new Date().toLocaleString(), 
+                user: currentUser
+            });
+            localStorage.setItem('generatedNumbers', JSON.stringify(generatedNumbers)); 
+            displayGeneratedNumbers();
+        }
+
+        function displayGeneratedNumbers() {
+            const numbersContainer = document.getElementById('generated-numbers');
+            numbersContainer.innerHTML = ""; 
+            
+            if (generatedNumbers.length === 0) {
+                numbersContainer.innerHTML = '<p>No numbers generated yet</p>';
+                return;
+            }
+            
+            // Display in reverse order (newest first)
+            generatedNumbers.slice().reverse().forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'number-item';
+                div.style.padding = '10px';
+                div.style.margin = '5px 0';
+                div.style.background = '#f8f9fa';
+                div.style.borderRadius = '5px';
+                div.innerHTML = `<strong>${item.value}</strong> by <em>${item.user}</em> <span>(${item.timestamp})</span>`;
+                numbersContainer.appendChild(div);
+            });
+        }
+
         function sendMessage() {
             const chatInput = document.getElementById('chat-input');
             const message = chatInput.value.trim();
-            
-            if (message && currentUser && socket && socket.readyState === WebSocket.OPEN) {
-                const messageData = {
-                    type: 'chat_message', 
-                    data: {
-                        name: currentUser, 
-                        message: message, 
-                        date: new Date().toLocaleString(), 
-                        profilePic: registeredCredentials[currentUser].profilePic
-                    }
+            const username = document.getElementById('user').innerText;
+
+            if (message && currentUser) {
+                // Check if user is banned
+                if (registeredCredentials[username].banned) {
+                    alert('You cannot send messages. Your account has been banned.');
+                    return;
+                }
+                
+                // Check if user is muted
+                if (registeredCredentials[username].muted) {
+                    alert('You are muted and cannot send messages.');
+                    return;
+                }
+                
+                const date = new Date().toLocaleString();
+                const profilePicURL = registeredCredentials[username].profilePic;
+
+                const newMessage = { 
+                    name: username, 
+                    date: date, 
+                    message: message, 
+                    profilePic: profilePicURL 
                 };
                 
-                socket.send(JSON.stringify(messageData));
-                chatInput.value = "";
+                chatMessages.push(newMessage);
+                localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
                 
-                // Hide typing indicator
-                hideTypingIndicator();
+                displayChatMessages();
+                chatInput.value = ""; 
+                
+                // Simulate live message delivery
+                setTimeout(() => {
+                    displayChatMessages();
+                }, 100);
             }
         }
 
-        // Display chat messages
         function displayChatMessages() {
             const chatContainer = document.getElementById('chat-messages');
-            chatContainer.innerHTML = "";
+            chatContainer.innerHTML = ""; 
             
             if (chatMessages.length === 0) {
                 chatContainer.innerHTML = '<p>No messages yet. Be the first to send one!</p>';
@@ -1320,51 +1470,6 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // Display online users
-        function displayOnlineUsers() {
-            const userList = document.getElementById('online-users-list');
-            userList.innerHTML = '';
-            
-            onlineUsers.forEach(user => {
-                const userDiv = document.createElement('div');
-                userDiv.className = 'user-item';
-                
-                // Determine user role for display
-                let roleText = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-                let roleClass = '';
-                if (user.role === "owner") {
-                    roleClass = 'role-owner';
-                } else if (user.role === "admin") {
-                    roleClass = 'role-admin';
-                } else if (user.role === "moderator") {
-                    roleClass = 'role-moderator';
-                } else {
-                    roleClass = 'role-user';
-                }
-                
-                userDiv.innerHTML = `
-                    <div>
-                        <strong>${user.username}</strong>
-                    </div>
-                    <span class="user-role ${roleClass}">${roleText}</span>
-                `;
-                userList.appendChild(userDiv);
-            });
-        }
-
-        // Update online users count
-        function updateOnlineUsers() {
-            document.getElementById('online-count').textContent = onlineUsers.length;
-        }
-
-        // Update statistics
-        function updateStats() {
-            document.getElementById('total-users').textContent = Object.keys(registeredCredentials).length;
-            document.getElementById('total-messages').textContent = chatMessages.length;
-            document.getElementById('total-numbers').textContent = generatedNumbers.length;
-        }
-
-        // Display announcements
         function displayAnnouncements() {
             const container = document.getElementById('announcements-container');
             container.innerHTML = "";
@@ -1390,315 +1495,490 @@
             });
         }
 
-        // Display generated numbers
-        function displayGeneratedNumbers() {
-            const numbersContainer = document.getElementById('generated-numbers');
-            numbersContainer.innerHTML = ""; 
+        function displayOnlineUsers() {
+            const userList = document.getElementById('online-users-list');
+            userList.innerHTML = '';
             
-            if (generatedNumbers.length === 0) {
-                numbersContainer.innerHTML = '<p>No numbers generated yet</p>';
-                return;
-            }
-            
-            // Display in reverse order (newest first)
-            generatedNumbers.slice().reverse().forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'number-item';
-                div.style.padding = '10px';
-                div.style.margin = '5px 0';
-                div.style.background = '#f8f9fa';
-                div.style.borderRadius = '5px';
-                div.innerHTML = `<strong>${item.value}</strong> by <em>${item.user}</em> <span>(${item.timestamp})</span>`;
-                numbersContainer.appendChild(div);
-            });
-        }
-
-        // Generate number
-        function generateNumber() {
-            const randomNumber = Math.floor(Math.random() * 100) + 1;
-            document.getElementById('random-number').innerText = randomNumber;
-            
-            // In a real implementation, send to server
-            generatedNumbers.push({
-                value: randomNumber, 
-                timestamp: new Date().toLocaleString(), 
-                user: currentUser
-            });
-            
-            displayGeneratedNumbers();
-        }
-
-        // Generate number in portal
-        function generateNumberInPortal() {
-            generateNumber();
-        }
-
-        // Login functions (simplified for demo)
-        function userLogin() {
-            const username = document.getElementById('user-username').value.trim();
-            const password = document.getElementById('user-password').value;
-            const errorDiv = document.getElementById('user-login-error');
-
-            if (!username || !password) {
-                errorDiv.textContent = 'Please enter both username and password';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            if (registeredCredentials[username] && registeredCredentials[username].password === password) {
-                // Check if user is banned
-                if (registeredCredentials[username].banned) {
-                    const banInfo = registeredCredentials[username].banInfo || {};
-                    const banMessage = banInfo.reason ? 
-                        `Your account has been banned. Reason: ${banInfo.reason}` :   
-                        'Your account has been banned.';
-                    errorDiv.textContent = banMessage;
-                    errorDiv.style.display = 'block';
-                    return;
-                }
+            // Simulate online users
+            const users = Object.keys(registeredCredentials);
+            users.forEach(username => {
+                const user = registeredCredentials[username];
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
                 
-                // Check if user is muted
-                if (registeredCredentials[username].muted) {
-                    alert('You are muted and cannot send messages.');
-                }
-                
-                currentUser = username;
-                displayWelcomeMessage(username);
-                loadProfilePicture(username);
-                displayChatContainer();
-                errorDiv.style.display = 'none';
-                updateOnlineUsers();
-            } else {
-                errorDiv.textContent = 'Invalid credentials, please try again.';
-                errorDiv.style.display = 'block';
-            }
-        }
-
-        function staffLogin() {
-            const username = document.getElementById('staff-username').value.trim();
-            const password = document.getElementById('staff-password').value;
-            const errorDiv = document.getElementById('staff-login-error');
-
-            if (!username || !password) {
-                errorDiv.textContent = 'Please enter both username and password';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            if (registeredCredentials[username] && registeredCredentials[username].password === password) {
-                const userRole = registeredCredentials[username].role;
-                if (userRole === "owner" || userRole === "admin" || userRole === "moderator") {
-                    currentUser = username;
-                    displayWelcomeMessage(username);
-                    loadProfilePicture(username);
-                    
-                    // Show appropriate panel based on role
-                    if (userRole === "owner") {
-                        document.getElementById('owner-panel').style.display = 'block';
-                        document.getElementById('staff-portal').style.display = 'block';
-                    } else if (userRole === "admin") {
-                        document.getElementById('admin-panel').style.display = 'block';
-                        document.getElementById('staff-portal').style.display = 'block';
-                    } else if (userRole === "moderator") {
-                        document.getElementById('moderator-panel').style.display = 'block';
-                        document.getElementById('staff-portal').style.display = 'block';
-                    }
-                    
-                    displayChatContainer();
-                    refreshStats();
-                    updateOnlineUsers();
+                // Determine user role for display
+                let roleText = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+                let roleClass = '';
+                if (user.role === "owner") {
+                    roleClass = 'role-owner';
+                } else if (user.role === "admin") {
+                    roleClass = 'role-admin';
+                } else if (user.role === "moderator") {
+                    roleClass = 'role-moderator';
                 } else {
-                    errorDiv.textContent = 'Insufficient privileges for staff portal';
-                    errorDiv.style.display = 'block';
+                    roleClass = 'role-user';
                 }
-            } else {
-                errorDiv.textContent = 'Invalid credentials, please try again.';
-                errorDiv.style.display = 'block';
+                
+                userDiv.innerHTML = `
+                    <div>
+                        <strong>${username}</strong>
+                    </div>
+                    <span class="user-role ${roleClass}">${roleText}</span>
+                `;
+                userList.appendChild(userDiv);
+            });
+        }
+
+        // Simulate online users update
+        function updateOnlineUsers() {
+            if (currentUser) {
+                document.getElementById('online-count').textContent = Object.keys(registeredCredentials).length;
             }
         }
 
-        function register() {
-            const regUsername = document.getElementById('reg-username').value.trim();
-            const regPassword = document.getElementById('reg-password').value;
-            const inviteCode = document.getElementById('invite-code').value.trim();
-            const profilePicture = document.getElementById('profile-picture').files[0];
-            const errorDiv = document.getElementById('reg-error');
-            const successDiv = document.getElementById('reg-success');
+        // Simulate stats update
+        function updateStats() {
+            document.getElementById('total-users').textContent = Object.keys(registeredCredentials).length;
+            document.getElementById('total-messages').textContent = chatMessages.length;
+            document.getElementById('total-numbers').textContent = generatedNumbers.length;
+        }
 
-            // Reset messages
-            errorDiv.style.display = 'none';
-            successDiv.style.display = 'none';
+        // Profile Management Functions
+        function showProfileModal() {
+            loadModalProfilePicture(currentUser);
+            document.getElementById('profile-modal').style.display = 'flex';
+        }
+        
+        function closeProfileModal() {
+            document.getElementById('profile-modal').style.display = 'none';
+        }
 
-            if (!regUsername || !regPassword) {
-                errorDiv.textContent = 'Please enter both username and password';
-                errorDiv.style.display = 'block';
+        function updateProfilePicture() {
+            const newProfilePicture = document.getElementById('new-profile-picture').files[0];
+            
+            if (!newProfilePicture) {
+                alert('Please select a profile picture');
                 return;
             }
-
-            if (regUsername.length < 3) {
-                errorDiv.textContent = 'Username must be at least 3 characters';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            if (regPassword.length < 6) {
-                errorDiv.textContent = 'Password must be at least 6 characters';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            if (!profilePicture) {
-                errorDiv.textContent = 'Please select a profile picture';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            if (registeredCredentials[regUsername]) {
-                errorDiv.textContent = 'Username is already taken, please choose a different one.';
-                errorDiv.style.display = 'block';
-                return;
-            }
-
-            // Determine role based on invite code
-            let role = "user";
-            if (inviteCode === "Bb66896769") {
-                role = "owner";
-            }
-
-            // Read profile picture as data URL
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 const profilePicURL = e.target.result;
-                registeredCredentials[regUsername] = { 
-                    password: regPassword,   
-                    profilePic: profilePicURL,   
-                    role: role,   
-                    banned: false,   
-                    muted: false
-                };
+                registeredCredentials[currentUser].profilePic = profilePicURL;
+                localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
                 
-                successDiv.textContent = 'Registration successful! You can now log in.';
-                successDiv.style.display = 'block';
-                
-                // Clear form
-                document.getElementById('reg-username').value = '';
-                document.getElementById('reg-password').value = '';
-                document.getElementById('invite-code').value = '';
-                document.getElementById('profile-picture').value = '';
-                
-                // Switch to login options after delay
-                setTimeout(displayLoginOptions, 2000);
+                loadProfilePicture(currentUser);
+                loadHeaderProfilePicture(currentUser);
+                loadModalProfilePicture(currentUser);
+                alert('Profile picture updated successfully!');
             };
             
-            reader.readAsDataURL(profilePicture);
+            reader.readAsDataURL(newProfilePicture);
         }
 
-        function displayLoginOptions() {
-            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-            document.getElementById('login-options').classList.add('active');
-            document.getElementById('profile-icon-container').style.display = 'none';
-        }
-
-        function displayStaffLogin() {
-            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-            document.getElementById('staff-login-form').classList.add('active');
-            document.getElementById('staff-login-error').style.display = 'none';
-            document.getElementById('profile-icon-container').style.display = 'none';
-        }
-
-        function displayUserLogin() {
-            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-            document.getElementById('user-login-form').classList.add('active');
-            document.getElementById('user-login-error').style.display = 'none';
-            document.getElementById('profile-icon-container').style.display = 'none';
-        }
-
-        function displayRegistrationForm() {
-            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-            document.getElementById('registration-form').classList.add('active');
-            document.getElementById('reg-error').style.display = 'none';
-            document.getElementById('reg-success').style.display = 'none';
-            document.getElementById('profile-icon-container').style.display = 'none';
-        }
-
-        function displayWelcomeMessage(username) {
-            document.getElementById('user').innerText = username;
-            document.getElementById('user-role').innerText = registeredCredentials[username].role;
-            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-            document.getElementById('welcome-message').classList.add('active');
-            loadProfilePicture(username);
+        function updatePassword() {
+            const newPassword = document.getElementById('new-password').value;
             
-            // Show profile icon in header
-            document.getElementById('profile-icon-container').style.display = 'block';
-            loadHeaderProfilePicture(username);
-            
-            // Show role-specific panels
-            const userRole = registeredCredentials[username].role;
-            if (userRole === "owner") {
-                document.getElementById('owner-panel').style.display = 'block';
-                document.getElementById('staff-portal').style.display = 'block';
-            } else if (userRole === "admin") {
-                document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('staff-portal').style.display = 'block';
-            } else if (userRole === "moderator") {
-                document.getElementById('moderator-panel').style.display = 'block';
-                document.getElementById('staff-portal').style.display = 'block';
+            if (!newPassword) {
+                alert('Please enter a new password');
+                return;
             }
             
-            refreshStats();
-            updateOnlineUsers();
-        }
-
-        function loadProfilePicture(username) {
-            const profilePicURL = registeredCredentials[username].profilePic;
-            const profilePic = document.getElementById('profile-pic');
-            profilePic.src = profilePicURL;
-        }
-
-        function loadHeaderProfilePicture(username) {
-            const profilePicURL = registeredCredentials[username].profilePic;
-            const profilePic = document.getElementById('header-profile-pic');
-            profilePic.src = profilePicURL;
-        }
-
-        function displayChatContainer() {
-            document.getElementById('chat-container').classList.add('active');
-            displayOnlineUsers();
-            updateOnlineUsers();
-        }
-
-        function logout() {
-            currentUser = null;
-            document.getElementById('profile-icon-container').style.display = 'none';
-            document.getElementById('owner-panel').style.display = 'none';
-            document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('moderator-panel').style.display = 'none';
-            document.getElementById('staff-portal').style.display = 'none';
-            displayLoginOptions();
-            updateOnlineUsers();
-        }
-
-        function refreshStats() {
-            updateStats();
-            displayOnlineUsers();
-        }
-
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            displayLoginOptions();
-            initWebSocket();
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
             
-            // Set up chat input event listener
-            const chatInput = document.getElementById('chat-input');
-            chatInput.addEventListener('input', sendTypingIndicator);
+            registeredCredentials[currentUser].password = newPassword;
+            localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
             
-            // Allow sending message with Enter key
-            chatInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    sendMessage();
+            document.getElementById('new-password').value = '';
+            alert('Password updated successfully!');
+        }
+
+        function deleteAccount() {
+            if (currentUser === "Brendan") {
+                alert("Cannot delete the Owner account");
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete your account? This cannot be undone.')) {
+                delete registeredCredentials[currentUser];
+                localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                
+                // Remove user's messages
+                chatMessages = chatMessages.filter(msg => msg.name !== currentUser);
+                localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+                
+                currentUser = null;
+                document.getElementById('profile-icon-container').style.display = 'none';
+                document.getElementById('profile-modal').style.display = 'none';
+                displayLoginOptions();
+                alert('Account deleted successfully.');
+                updateOnlineUsers();
+            }
+        }
+
+        // Password Management Functions
+        function showPasswordManagement() {
+            const selectUser = document.getElementById('select-user');
+            selectUser.innerHTML = '';
+            
+            for (const username in registeredCredentials) {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = username;
+                selectUser.appendChild(option);
+            }
+            
+            document.getElementById('password-modal').style.display = 'flex';
+        }
+        
+        function closePasswordModal() {
+            document.getElementById('password-modal').style.display = 'none';
+        }
+        
+        function loadUserPassword() {
+            const selectedUser = document.getElementById('select-user').value;
+            if (selectedUser && registeredCredentials[selectedUser]) {
+                document.getElementById('user-password-display').value = registeredCredentials[selectedUser].password;
+            }
+        }
+        
+        function changeUserPassword() {
+            const selectedUser = document.getElementById('select-user').value;
+            const newPassword = document.getElementById('new-user-password').value;
+            
+            if (!selectedUser) {
+                alert('Please select a user');
+                return;
+            }
+            
+            if (!newPassword) {
+                alert('Please enter a new password');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+            
+            registeredCredentials[selectedUser].password = newPassword;
+            localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+            
+            document.getElementById('new-user-password').value = '';
+            alert(`Password for ${selectedUser} updated successfully!`);
+        }
+
+        // User Management Functions (FIX 2)
+        function showUserManagement() {
+            const userSelect = document.getElementById('manage-user-select');
+            userSelect.innerHTML = '';
+            
+            // Populate user list
+            for (const username in registeredCredentials) {
+                const option = document.createElement('option');
+                option.value = username;
+                option.textContent = username;
+                userSelect.appendChild(option);
+            }
+            
+            // Reset form
+            document.getElementById('user-details').style.display = 'none';
+            document.getElementById('manage-user-select').value = '';
+            
+            // Show modal
+            document.getElementById('user-management-modal').style.display = 'flex';
+        }
+        
+        function closeUserManagementModal() {
+            document.getElementById('user-management-modal').style.display = 'none';
+        }
+        
+        function loadUserInfo() {
+            const selectedUser = document.getElementById('manage-user-select').value;
+            if (!selectedUser || !registeredCredentials[selectedUser]) return;
+            
+            const user = registeredCredentials[selectedUser];
+            
+            // Load user info
+            document.getElementById('manage-username').value = selectedUser;
+            document.getElementById('manage-user-role').value = user.role;
+            
+            // Set status
+            if (user.banned) {
+                document.getElementById('manage-user-status').value = 'banned';
+            } else if (user.muted) {
+                document.getElementById('manage-user-status').value = 'muted';
+            } else {
+                document.getElementById('manage-user-status').value = 'active';
+            }
+            
+            // Show details
+            document.getElementById('user-details').style.display = 'block';
+        }
+        
+        function updateUser() {
+            const selectedUser = document.getElementById('manage-user-select').value;
+            if (!selectedUser || !registeredCredentials[selectedUser]) {
+                alert('Please select a user');
+                return;
+            }
+            
+            const newRole = document.getElementById('manage-user-role').value;
+            const newStatus = document.getElementById('manage-user-status').value;
+            
+            // Update user info
+            registeredCredentials[selectedUser].role = newRole;
+            
+            // Reset status flags
+            registeredCredentials[selectedUser].banned = false;
+            registeredCredentials[selectedUser].muted = false;
+            
+            // Apply new status
+            if (newStatus === 'banned') {
+                registeredCredentials[selectedUser].banned = true;
+                // Add ban info
+                registeredCredentials[selectedUser].banInfo = {
+                    reason: "Banned by administrator", 
+                    bannedBy: currentUser, 
+                    banDate: new Date().toLocaleString()
+                };
+            } else if (newStatus === 'muted') {
+                registeredCredentials[selectedUser].muted = true;
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+            
+            alert(`User ${selectedUser} updated successfully!`);
+            
+            // Refresh UI if current user was modified
+            if (selectedUser === currentUser) {
+                displayWelcomeMessage(currentUser);
+            }
+            
+            // Reload user info to reflect changes
+            loadUserInfo();
+            updateOnlineUsers();
+        }
+        
+        function deleteUser() {
+            const selectedUser = document.getElementById('manage-user-select').value;
+            if (!selectedUser || !registeredCredentials[selectedUser]) {
+                alert('Please select a user');
+                return;
+            }
+            
+            // Prevent deleting owner account
+            if (selectedUser === "Brendan" || registeredCredentials[selectedUser].role === "owner") {
+                alert("Cannot delete the Owner account");
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete user ${selectedUser}?`)) {
+                // Remove user
+                delete registeredCredentials[selectedUser];
+                localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                
+                // Remove user's messages
+                chatMessages = chatMessages.filter(msg => msg.name !== selectedUser);
+                localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+                
+                // Refresh UI
+                showUserManagement(); // Reload the user list
+                refreshStats();
+                updateOnlineUsers();
+                
+                alert(`User ${selectedUser} deleted successfully!`);
+            }
+        }
+
+        // Announcement Functions
+        function showAnnouncementForm() {
+            document.getElementById('announcement-modal').style.display = 'flex';
+        }
+        
+        function closeAnnouncementModal() {
+            document.getElementById('announcement-modal').style.display = 'none';
+        }
+        
+        function sendAnnouncement() {
+            const title = document.getElementById('announcement-title').value.trim();
+            const content = document.getElementById('announcement-content').value.trim();
+            
+            if (!title || !content) {
+                alert('Please enter both title and content');
+                return;
+            }
+            
+            const newAnnouncement = {
+                title: title, 
+                content: content, 
+                author: currentUser, 
+                date: new Date().toLocaleString()
+            };
+            
+            announcements.push(newAnnouncement);
+            localStorage.setItem('announcements', JSON.stringify(announcements));
+            
+            displayAnnouncements();
+            
+            // Clear form
+            document.getElementById('announcement-title').value = '';
+            document.getElementById('announcement-content').value = '';
+            
+            // Close modal
+            document.getElementById('announcement-modal').style.display = 'none';
+            
+            alert('Announcement sent successfully!');
+        }
+
+        // Moderator/Admin Panel Functions
+        function showMuteUserForm() {
+            const username = prompt("Enter the username to mute: ");
+            if (username && registeredCredentials[username]) {
+                if (confirm(`Are you sure you want to mute user ${username}?`)) {
+                    registeredCredentials[username].muted = true;
+                    localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                    alert(`User ${username} has been muted.`);
                 }
-            });
+            } else if (username) {
+                alert("User not found.");
+            }
+        }
+
+        function showUnmuteUserForm() {
+            const username = prompt("Enter the username to unmute: ");
+            if (username && registeredCredentials[username]) {
+                if (confirm(`Are you sure you want to unmute user ${username}?`)) {
+                    registeredCredentials[username].muted = false;
+                    localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                    alert(`User ${username} has been unmuted.`);
+                }
+            } else if (username) {
+                alert("User not found.");
+            }
+        }
+
+        function showBanUserForm() {
+            const username = prompt("Enter the username to ban: ");
+            if (username && registeredCredentials[username]) {
+                const reason = prompt("Enter the reason for banning (optional): ");
+                if (confirm(`Are you sure you want to ban user ${username}?`)) {
+                    registeredCredentials[username].banned = true;
+                    registeredCredentials[username].banInfo = {
+                        reason: reason || "No reason provided", 
+                        bannedBy: currentUser, 
+                        banDate: new Date().toLocaleString()
+                    };
+                    localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                    alert(`User ${username} has been banned.`);
+                }
+            } else if (username) {
+                alert("User not found.");
+            }
+        }
+
+        function showUnbanUserForm() {
+            const username = prompt("Enter the username to unban: ");
+            if (username && registeredCredentials[username]) {
+                if (confirm(`Are you sure you want to unban user ${username}?`)) {
+                    registeredCredentials[username].banned = false;
+                    delete registeredCredentials[username].banInfo;
+                    localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                    alert(`User ${username} has been unbanned.`);
+                }
+            } else if (username) {
+                alert("User not found.");
+            }
+        }
+
+        // Staff Portal Functions
+        function refreshStats() {
+            document.getElementById('total-users').textContent = Object.keys(registeredCredentials).length;
+            document.getElementById('total-messages').textContent = chatMessages.length;
+            document.getElementById('total-numbers').textContent = generatedNumbers.length;
+            displayOnlineUsers();
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
+                localStorage.removeItem('registeredCredentials');
+                localStorage.removeItem('generatedNumbers');
+                localStorage.removeItem('chatMessages');
+                localStorage.removeItem('announcements');
+                
+                // Reinitialize default users
+                registeredCredentials = {
+                    "Brendan": {
+                        password: ownerPassword, 
+                        profilePic: "https://i.pravatar.cc/150?img=1", 
+                        role: "owner", 
+                        banned: false, 
+                        muted: false
+                    }, 
+                    "Admin": {
+                        password: adminPassword, 
+                        profilePic: "https://i.pravatar.cc/150?img=2", 
+                        role: "admin", 
+                        banned: false, 
+                        muted: false
+                    }, 
+                    "Moderator": {
+                        password: moderatorPassword, 
+                        profilePic: "https://i.pravatar.cc/150?img=3", 
+                        role: "moderator", 
+                        banned: false, 
+                        muted: false
+                    }
+                };
+                generatedNumbers = [];
+                chatMessages = [];
+                announcements = [];
+                
+                localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
+                localStorage.setItem('generatedNumbers', JSON.stringify(generatedNumbers));
+                localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+                localStorage.setItem('announcements', JSON.stringify(announcements));
+                
+                refreshStats();
+                displayGeneratedNumbers();
+                displayChatMessages();
+                displayAnnouncements();
+                updateOnlineUsers();
+                alert('All data has been cleared successfully!');
+            }
+        }
+
+        // Allow sending message with Enter key
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && document.getElementById('chat-input')) {
+                sendMessage();
+            }
         });
+
+        // Game Functions
+        function showSnakeGame() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('snake-game').classList.add('active');
+        }
+
+        function showInfiniteCraft() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('infinite-craft').classList.add('active');
+        }
+
+        function exitSnakeGame() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('welcome-message').classList.add('active');
+        }
+
+        function exitCraftGame() {
+            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+            document.getElementById('welcome-message').classList.add('active');
+        }
     </script>
 </body>
 </html>
