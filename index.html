@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatnet - Live Global Chat</title>
+    <title>Chatnet</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -518,7 +518,7 @@
             margin: 20px 0;
         }
 
-        .game-iframe {
+        .game-canvas {
             border: 2px solid var(--border);
             border-radius: 10px;
             background: #f8f9fa;
@@ -552,52 +552,6 @@
             opacity: 0.8;
         }
 
-        .live-indicator {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            color: #4cc9f0;
-            font-weight: bold;
-        }
-
-        .live-dot {
-            width: 10px;
-            height: 10px;
-            background-color: #4cc9f0;
-            border-radius: 50%;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.4; }
-            100% { opacity: 1; }
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            color: #4cc9f0;
-            margin-top: 5px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #4cc9f0;
-        }
-
-        .status-dot.connected {
-            background-color: #4cc9f0;
-        }
-
-        .status-dot.disconnected {
-            background-color: #f72585;
-        }
-
         @media (max-width: 768px) {
             .chat-container {
                 grid-template-columns: 1fr;
@@ -618,15 +572,11 @@
         <div class="header">
             <div class="logo">
                 <i class="fas fa-comments"></i>
-                <h1>Chatnet <span class="live-indicator"><span class="live-dot"></span>LIVE</span></h1>
+                <h1>Advanced Chat & Management System</h1>
             </div>
             <div class="user-controls">
                 <div class="profile-icon-container" onclick="showProfileModal()" id="profile-icon-container" style="display: none;">
                     <img id="header-profile-pic" class="profile-icon" src="" alt="Profile">
-                </div>
-                <div class="connection-status">
-                    <span class="status-dot connected"></span>
-                    <span>Connected</span>
                 </div>
             </div>
         </div>
@@ -831,7 +781,7 @@
         </div>
 
         <div id="chat-container" class="card">
-            <h2><i class="fas fa-comments"></i> Global Chat Room</h2>
+            <h2><i class="fas fa-comments"></i> Chat Room</h2>
             <div class="chat-container">
                 <div>
                     <div class="panel-section">
@@ -842,7 +792,7 @@
                     </div>
 
                     <div class="panel-section">
-                        <h3><i class="fas fa-comment-dots"></i> Live Chat Messages</h3>
+                        <h3><i class="fas fa-comment-dots"></i> Chat Messages</h3>
                         <div id="chat-messages" class="chat-messages"></div>
                         <div class="chat-input-container">
                             <input type="text" id="chat-input" placeholder="Type your message..." required>
@@ -851,7 +801,7 @@
                     </div>
                 </div>
                 <div class="sidebar">
-                    <h3><i class="fas fa-users"></i> Online Users <span id="online-count">0</span></h3>
+                    <h3><i class="fas fa-users"></i> Online Users</h3>
                     <div class="user-list" id="online-users-list"></div>
                 </div>
             </div>
@@ -869,37 +819,40 @@
             </div>
         </div>
 
-        <!-- Snake Game Embed -->
+        <!-- Snake Game -->
         <div id="snake-game" class="card">
             <h2><i class="fas fa-gamepad"></i> Snake Game</h2>
             <div class="panel-section">
                 <div class="game-container">
-                    <iframe src="https://www.google.com/logos/fnbx/snake/index.html" 
-                            class="game-iframe" 
-                            width="400" 
-                            height="440" 
-                            frameborder="0">
-                    </iframe>
+                    <div class="game-score">Score: <span id="snake-score">0</span></div>
+                    <canvas id="snake-canvas" class="game-canvas" width="400" height="400"></canvas>
                     <div class="game-controls">
-                        <button onclick="exitSnakeGame()" class="btn-danger">Exit Game</button>
+                        <button onclick="startSnakeGame()" class="btn-success">Start Game</button>
+                        <button onclick="resetSnakeGame()" class="btn-secondary">Reset</button>
                     </div>
+                    <div class="game-message" id="snake-message"></div>
+                    <p>Use arrow keys to control the snake. Eat food to grow and earn points!</p>
                 </div>
             </div>
         </div>
 
-        <!-- Infinite Craft Embed -->
+        <!-- Infinite Craft Game -->
         <div id="infinite-craft" class="card">
             <h2><i class="fas fa-cubes"></i> Infinite Craft</h2>
             <div class="panel-section">
                 <div class="game-container">
-                    <iframe src="https://neal.fun/infinite-craft/" 
-                            class="game-iframe" 
-                            width="100%" 
-                            height="500" 
-                            frameborder="0">
-                    </iframe>
+                    <div class="game-score">Discoveries: <span id="craft-discoveries">0</span></div>
+                    <div id="craft-elements" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">
+                        <!-- Elements will be added here dynamically -->
+                    </div>
+                    <div id="craft-combination" style="margin: 20px 0; min-height: 60px;">
+                        <p>Drag and drop elements to combine them!</p>
+                    </div>
+                    <div id="craft-inventory" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; min-height: 100px; border: 2px dashed var(--border); border-radius: 10px; padding: 10px;">
+                        <p>Your discoveries will appear here</p>
+                    </div>
                     <div class="game-controls">
-                        <button onclick="exitCraftGame()" class="btn-danger">Exit Game</button>
+                        <button onclick="resetCraftGame()" class="btn-secondary">Reset Game</button>
                     </div>
                 </div>
             </div>
@@ -1010,7 +963,7 @@
     </div>
 
     <footer>
-        <p>Chatnet - Live Global Chat System &copy; 2023</p>
+        <p>Advanced Chat & Management System &copy; 2023</p>
     </footer>
 
     <script>
@@ -1053,22 +1006,13 @@
             localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
         }
 
-        // Simulate online users (in a real app, this would come from server)
-        let onlineUsers = [];
-
         document.addEventListener('DOMContentLoaded', function() {
             displayLoginOptions();
             displayGeneratedNumbers(); 
             displayChatMessages();
             displayAnnouncements();
-            updateOnlineUsers();
+            initCraftGame();
         });
-
-        // Simulate live updates
-        setInterval(function() {
-            updateOnlineUsers();
-            updateStats();
-        }, 5000);
 
         function displayLoginOptions() {
             document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
@@ -1132,7 +1076,6 @@
                     displayChatContainer();
                     
                     refreshStats();
-                    updateOnlineUsers();
                 } else {
                     errorDiv.textContent = 'Insufficient privileges for staff portal';
                     errorDiv.style.display = 'block';
@@ -1176,7 +1119,6 @@
                 loadProfilePicture(username);
                 displayChatContainer();
                 errorDiv.style.display = 'none';
-                updateOnlineUsers();
             } else {
                 errorDiv.textContent = 'Invalid credentials, please try again.';
                 errorDiv.style.display = 'block';
@@ -1270,7 +1212,6 @@
             document.getElementById('moderator-panel').style.display = 'none';
             document.getElementById('staff-portal').style.display = 'none';
             displayLoginOptions();
-            updateOnlineUsers();
         }
 
         function displayWelcomeMessage(username) {
@@ -1303,7 +1244,6 @@
             }
             
             refreshStats();
-            updateOnlineUsers();
         }
 
         function loadProfilePicture(username) {
@@ -1327,7 +1267,6 @@
         function displayChatContainer() {
             document.getElementById('chat-container').classList.add('active');
             displayOnlineUsers();
-            updateOnlineUsers();
         }
 
         function generateNumber() {
@@ -1408,11 +1347,6 @@
                 
                 displayChatMessages();
                 chatInput.value = ""; 
-                
-                // Simulate live message delivery
-                setTimeout(() => {
-                    displayChatMessages();
-                }, 100);
             }
         }
 
@@ -1499,9 +1433,7 @@
             const userList = document.getElementById('online-users-list');
             userList.innerHTML = '';
             
-            // Simulate online users
-            const users = Object.keys(registeredCredentials);
-            users.forEach(username => {
+            for (const username in registeredCredentials) {
                 const user = registeredCredentials[username];
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
@@ -1526,21 +1458,7 @@
                     <span class="user-role ${roleClass}">${roleText}</span>
                 `;
                 userList.appendChild(userDiv);
-            });
-        }
-
-        // Simulate online users update
-        function updateOnlineUsers() {
-            if (currentUser) {
-                document.getElementById('online-count').textContent = Object.keys(registeredCredentials).length;
             }
-        }
-
-        // Simulate stats update
-        function updateStats() {
-            document.getElementById('total-users').textContent = Object.keys(registeredCredentials).length;
-            document.getElementById('total-messages').textContent = chatMessages.length;
-            document.getElementById('total-numbers').textContent = generatedNumbers.length;
         }
 
         // Profile Management Functions
@@ -1615,7 +1533,6 @@
                 document.getElementById('profile-modal').style.display = 'none';
                 displayLoginOptions();
                 alert('Account deleted successfully.');
-                updateOnlineUsers();
             }
         }
 
@@ -1761,7 +1678,6 @@
             
             // Reload user info to reflect changes
             loadUserInfo();
-            updateOnlineUsers();
         }
         
         function deleteUser() {
@@ -1789,7 +1705,6 @@
                 // Refresh UI
                 showUserManagement(); // Reload the user list
                 refreshStats();
-                updateOnlineUsers();
                 
                 alert(`User ${selectedUser} deleted successfully!`);
             }
@@ -1947,8 +1862,6 @@
                 displayGeneratedNumbers();
                 displayChatMessages();
                 displayAnnouncements();
-                updateOnlineUsers();
-                alert('All data has been cleared successfully!');
             }
         }
 
@@ -1959,26 +1872,388 @@
             }
         });
 
-        // Game Functions
+        // Snake Game Implementation
+        let snakeGame = {
+            canvas: null,
+            ctx: null,
+            snake: [],
+            food: {},
+            direction: 'right',
+            nextDirection: 'right',
+            score: 0,
+            gameInterval: null,
+            gameRunning: false,
+            gridSize: 20,
+            gridWidth: 0,
+            gridHeight: 0
+        };
+
+        function initSnakeGame() {
+            snakeGame.canvas = document.getElementById('snake-canvas');
+            snakeGame.ctx = snakeGame.canvas.getContext('2d');
+            snakeGame.gridWidth = snakeGame.canvas.width / snakeGame.gridSize;
+            snakeGame.gridHeight = snakeGame.canvas.height / snakeGame.gridSize;
+            
+            document.addEventListener('keydown', function(e) {
+                if (!snakeGame.gameRunning) return;
+                
+                switch(e.key) {
+                    case 'ArrowUp':
+                        if (snakeGame.direction !== 'down') snakeGame.nextDirection = 'up';
+                        break;
+                    case 'ArrowDown':
+                        if (snakeGame.direction !== 'up') snakeGame.nextDirection = 'down';
+                        break;
+                    case 'ArrowLeft':
+                        if (snakeGame.direction !== 'right') snakeGame.nextDirection = 'left';
+                        break;
+                    case 'ArrowRight':
+                        if (snakeGame.direction !== 'left') snakeGame.nextDirection = 'right';
+                        break;
+                }
+            });
+        }
+
+        function startSnakeGame() {
+            if (snakeGame.gameRunning) return;
+            
+            // Initialize game state
+            snakeGame.snake = [
+                {x: 10, y: 10},
+                {x: 9, y: 10},
+                {x: 8, y: 10}
+            ];
+            snakeGame.direction = 'right';
+            snakeGame.nextDirection = 'right';
+            snakeGame.score = 0;
+            document.getElementById('snake-score').textContent = snakeGame.score;
+            document.getElementById('snake-message').textContent = '';
+            
+            generateSnakeFood();
+            snakeGame.gameRunning = true;
+            
+            if (snakeGame.gameInterval) clearInterval(snakeGame.gameInterval);
+            snakeGame.gameInterval = setInterval(updateSnakeGame, 150);
+        }
+
+        function resetSnakeGame() {
+            if (snakeGame.gameInterval) clearInterval(snakeGame.gameInterval);
+            snakeGame.gameRunning = false;
+            document.getElementById('snake-message').textContent = 'Game Reset';
+            drawSnakeGame();
+        }
+
+        function generateSnakeFood() {
+            snakeGame.food = {
+                x: Math.floor(Math.random() * snakeGame.gridWidth),
+                y: Math.floor(Math.random() * snakeGame.gridHeight)
+            };
+            
+            // Make sure food doesn't appear on snake
+            for (let segment of snakeGame.snake) {
+                if (segment.x === snakeGame.food.x && segment.y === snakeGame.food.y) {
+                    return generateSnakeFood();
+                }
+            }
+        }
+
+        function updateSnakeGame() {
+            if (!snakeGame.gameRunning) return;
+            
+            // Update direction
+            snakeGame.direction = snakeGame.nextDirection;
+            
+            // Calculate new head position
+            const head = {x: snakeGame.snake[0].x, y: snakeGame.snake[0].y};
+            
+            switch(snakeGame.direction) {
+                case 'up': head.y--; break;
+                case 'down': head.y++; break;
+                case 'left': head.x--; break;
+                case 'right': head.x++; break;
+            }
+            
+            // Check collision with walls
+            if (head.x < 0 || head.x >= snakeGame.gridWidth || 
+                head.y < 0 || head.y >= snakeGame.gridHeight) {
+                endSnakeGame();
+                return;
+            }
+            
+            // Check collision with self
+            for (let i = 0; i < snakeGame.snake.length; i++) {
+                if (snakeGame.snake[i].x === head.x && snakeGame.snake[i].y === head.y) {
+                    endSnakeGame();
+                    return;
+                }
+            }
+            
+            // Add new head
+            snakeGame.snake.unshift(head);
+            
+            // Check if food is eaten
+            if (head.x === snakeGame.food.x && head.y === snakeGame.food.y) {
+                snakeGame.score += 10;
+                document.getElementById('snake-score').textContent = snakeGame.score;
+                generateSnakeFood();
+            } else {
+                // Remove tail if no food eaten
+                snakeGame.snake.pop();
+            }
+            
+            drawSnakeGame();
+        }
+
+        function drawSnakeGame() {
+            // Clear canvas
+            snakeGame.ctx.fillStyle = '#f8f9fa';
+            snakeGame.ctx.fillRect(0, 0, snakeGame.canvas.width, snakeGame.canvas.height);
+            
+            // Draw snake
+            snakeGame.ctx.fillStyle = '#4361ee';
+            for (let segment of snakeGame.snake) {
+                snakeGame.ctx.fillRect(
+                    segment.x * snakeGame.gridSize, 
+                    segment.y * snakeGame.gridSize, 
+                    snakeGame.gridSize - 1, 
+                    snakeGame.gridSize - 1
+                );
+            }
+            
+            // Draw food
+            snakeGame.ctx.fillStyle = '#f72585';
+            snakeGame.ctx.fillRect(
+                snakeGame.food.x * snakeGame.gridSize, 
+                snakeGame.food.y * snakeGame.gridSize, 
+                snakeGame.gridSize - 1, 
+                snakeGame.gridSize - 1
+            );
+        }
+
+        function endSnakeGame() {
+            snakeGame.gameRunning = false;
+            clearInterval(snakeGame.gameInterval);
+            document.getElementById('snake-message').textContent = `Game Over! Final Score: ${snakeGame.score}`;
+        }
+
         function showSnakeGame() {
             document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
             document.getElementById('snake-game').classList.add('active');
+            initSnakeGame();
+            drawSnakeGame();
         }
+
+        // Infinite Craft Game Implementation
+        let craftGame = {
+            elements: [
+                {name: "Fire", emoji: "🔥", discovered: true},
+                {name: "Water", emoji: "💧", discovered: true},
+                {name: "Earth", emoji: "🌍", discovered: true},
+                {name: "Air", emoji: "💨", discovered: true},
+                {name: "Stone", emoji: "🪨", discovered: true},
+                {name: "Plant", emoji: "🌱", discovered: true},
+                {name: "Animal", emoji: "🐾", discovered: true},
+                {name: "Metal", emoji: "⚙️", discovered: true},
+                {name: "Light", emoji: "💡", discovered: true},
+                {name: "Darkness", emoji: "🌑", discovered: true}
+            ],
+            combinations: {
+                "Fire,Water": {result: "Steam", emoji: "💨"},
+                "Fire,Earth": {result: "Lava", emoji: "🌋"},
+                "Water,Earth": {result: "Mud", emoji: "💩"},
+                "Air,Fire": {result: "Energy", emoji: "⚡"},
+                "Air,Water": {result: "Rain", emoji: "🌧️"},
+                "Air,Earth": {result: "Dust", emoji: "🌫️"},
+                "Stone,Fire": {result: "Metal", emoji: "⚙️"},
+                "Plant,Water": {result: "Tree", emoji: "🌳"},
+                "Plant,Earth": {result: "Grass", emoji: "🌿"},
+                "Animal,Water": {result: "Fish", emoji: "🐟"},
+                "Animal,Earth": {result: "Mammal", emoji: "🦝"},
+                "Metal,Fire": {result: "Tool", emoji: "🔧"},
+                "Light,Darkness": {result: "Universe", emoji: "🌌"},
+                "Steam,Earth": {result: "Geyser", emoji: "🌋"},
+                "Lava,Water": {result: "Obsidian", emoji: "🔮"},
+                "Mud,Plant": {result: "Swamp", emoji: "🐊"},
+                "Energy,Water": {result: "Life", emoji: "🧬"},
+                "Rain,Earth": {result: "River", emoji: "🌊"},
+                "Dust,Air": {result: "Storm", emoji: "🌪️"},
+                "Tree,Fire": {result: "Ash", emoji: "🌪️"},
+                "Fish,Fire": {result: "Cooked Fish", emoji: "🐟"},
+                "Mammal,Metal": {result: "Human", emoji: "🧍"},
+                "Tool,Earth": {result: "Machine", emoji: "🤖"},
+                "Universe,Life": {result: "Alien", emoji: "👽"}
+            },
+            discoveredElements: [],
+            draggedElement: null
+        };
+
+        function initCraftGame() {
+            // Load saved discoveries
+            const savedDiscoveries = JSON.parse(localStorage.getItem('craftDiscoveries')) || [];
+            craftGame.discoveredElements = [...savedDiscoveries];
+            
+            // Add default elements if not discovered
+            craftGame.elements.forEach(el => {
+                if (el.discovered && !craftGame.discoveredElements.find(d => d.name === el.name)) {
+                    craftGame.discoveredElements.push({...el});
+                }
+            });
+            
+            updateCraftDisplay();
+            updateCraftInventory();
+        }
+
+        function updateCraftDisplay() {
+            const container = document.getElementById('craft-elements');
+            container.innerHTML = '';
+            
+            craftGame.discoveredElements.forEach(element => {
+                const elDiv = document.createElement('div');
+                elDiv.className = 'craft-element';
+                elDiv.innerHTML = `
+                    <div style="font-size: 2rem; cursor: grab;">${element.emoji}</div>
+                    <div style="font-size: 0.8rem;">${element.name}</div>
+                `;
+                elDiv.draggable = true;
+                elDiv.dataset.name = element.name;
+                elDiv.dataset.emoji = element.emoji;
+                
+                elDiv.addEventListener('dragstart', function(e) {
+                    craftGame.draggedElement = {
+                        name: element.name,
+                        emoji: element.emoji
+                    };
+                    e.dataTransfer.setData('text/plain', element.name);
+                });
+                
+                container.appendChild(elDiv);
+            });
+        }
+
+        function updateCraftInventory() {
+            const container = document.getElementById('craft-inventory');
+            container.innerHTML = '';
+            
+            if (craftGame.discoveredElements.length === 0) {
+                container.innerHTML = '<p>Your discoveries will appear here</p>';
+                return;
+            }
+            
+            craftGame.discoveredElements.forEach(element => {
+                const elDiv = document.createElement('div');
+                elDiv.className = 'craft-element';
+                elDiv.innerHTML = `
+                    <div style="font-size: 1.5rem;">${element.emoji}</div>
+                    <div style="font-size: 0.7rem;">${element.name}</div>
+                `;
+                elDiv.style.padding = '5px';
+                elDiv.style.border = '1px solid var(--border)';
+                elDiv.style.borderRadius = '5px';
+                elDiv.style.margin = '3px';
+                container.appendChild(elDiv);
+            });
+            
+            document.getElementById('craft-discoveries').textContent = craftGame.discoveredElements.length;
+        }
+
+        function resetCraftGame() {
+            if (confirm('Are you sure you want to reset your discoveries?')) {
+                localStorage.removeItem('craftDiscoveries');
+                craftGame.discoveredElements = [];
+                craftGame.elements.forEach(el => {
+                    if (el.discovered) {
+                        craftGame.discoveredElements.push({...el});
+                    }
+                });
+                updateCraftDisplay();
+                updateCraftInventory();
+                document.getElementById('craft-combination').innerHTML = '<p>Drag and drop elements to combine them!</p>';
+            }
+        }
+
+        // Setup drop zone
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('craft-combination');
+            
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.style.backgroundColor = '#e9ecef';
+            });
+            
+            dropZone.addEventListener('dragleave', function() {
+                this.style.backgroundColor = '';
+            });
+            
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.style.backgroundColor = '';
+                
+                if (!craftGame.draggedElement) return;
+                
+                const firstElement = craftGame.draggedElement;
+                const secondElementName = e.dataTransfer.getData('text/plain');
+                const secondElement = craftGame.discoveredElements.find(el => el.name === secondElementName);
+                
+                if (!secondElement) return;
+                
+                // Create combination key (alphabetically sorted)
+                const combinationKey = [firstElement.name, secondElement.name].sort().join(',');
+                
+                // Check if combination exists
+                if (craftGame.combinations[combinationKey]) {
+                    const result = craftGame.combinations[combinationKey];
+                    
+                    // Check if already discovered
+                    const alreadyDiscovered = craftGame.discoveredElements.find(el => el.name === result.result);
+                    
+                    if (!alreadyDiscovered) {
+                        // Add new discovery
+                        craftGame.discoveredElements.push({
+                            name: result.result,
+                            emoji: result.emoji,
+                            discovered: true
+                        });
+                        
+                        // Save to localStorage
+                        localStorage.setItem('craftDiscoveries', JSON.stringify(craftGame.discoveredElements));
+                        
+                        // Update displays
+                        updateCraftDisplay();
+                        updateCraftInventory();
+                        
+                        // Show result
+                        this.innerHTML = `
+                            <div style="font-size: 3rem;">${firstElement.emoji} + ${secondElement.emoji} = ${result.emoji}</div>
+                            <div style="font-size: 1.2rem; margin-top: 10px;">${result.result} discovered!</div>
+                        `;
+                    } else {
+                        this.innerHTML = `
+                            <div style="font-size: 3rem;">${firstElement.emoji} + ${secondElement.emoji} = ${result.emoji}</div>
+                            <div style="font-size: 1.2rem; margin-top: 10px;">${result.result} (already discovered)</div>
+                        `;
+                    }
+                } else {
+                    // No combination found
+                    this.innerHTML = `
+                        <div style="font-size: 3rem;">${firstElement.emoji} + ${secondElement.emoji}</div>
+                        <div style="font-size: 1.2rem; margin-top: 10px;">No new combination found</div>
+                    `;
+                }
+                
+                craftGame.draggedElement = null;
+            });
+        });
 
         function showInfiniteCraft() {
             document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
             document.getElementById('infinite-craft').classList.add('active');
+            initCraftGame();
         }
 
-        function exitSnakeGame() {
-            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-            document.getElementById('welcome-message').classList.add('active');
-        }
-
-        function exitCraftGame() {
-            document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-            document.getElementById('welcome-message').classList.add('active');
-        }
+        // Initialize games when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initSnakeGame();
+        });
     </script>
 </body>
 </html>
