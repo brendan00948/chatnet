@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatnet - Live Global Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -1050,26 +1049,44 @@
         // Initialize WebSocket connection
         function initWebSocket() {
             try {
-                // In a real implementation, this would connect to your WebSocket server
-                // For demonstration, we'll simulate the connection
-                socket = {
-                    send: function(data) {
-                        // Simulate sending data to server
-                        const message = JSON.parse(data);
-                        handleServerMessage(message);
-                    }, 
-                    close: function() {
-                        // Simulate closing connection
-                        updateConnectionStatus('disconnected');
-                    }
-                };
+                // Connect to a real WebSocket server
+                // For demonstration purposes, we'll use a mock server
+                // In production, replace with your actual WebSocket server URL
+                socket = new WebSocket('wss://echo.websocket.org');
                 
-                // Simulate connection success
-                setTimeout(() => {
+                // Connection opened
+                socket.addEventListener('open', function (event) {
                     updateConnectionStatus('connected');
-                    // Simulate initial data
-                    simulateInitialData();
-                }, 1000);
+                    console.log('Connected to WebSocket server');
+                    
+                    // Simulate initial data after connection
+                    setTimeout(() => {
+                        simulateInitialData();
+                    }, 1000);
+                });
+                
+                // Listen for messages
+                socket.addEventListener('message', function (event) {
+                    console.log('Message from server:', event.data);
+                    try {
+                        const message = JSON.parse(event.data);
+                        handleServerMessage(message);
+                    } catch (e) {
+                        console.error('Error parsing message:', e);
+                    }
+                });
+                
+                // Connection closed
+                socket.addEventListener('close', function (event) {
+                    updateConnectionStatus('disconnected');
+                    console.log('WebSocket connection closed');
+                });
+                
+                // Connection error
+                socket.addEventListener('error', function (event) {
+                    updateConnectionStatus('disconnected');
+                    console.error('WebSocket error:', event);
+                });
                 
             } catch (error) {
                 console.error('WebSocket connection failed: ', error);
@@ -1207,7 +1224,7 @@
 
         // Send typing indicator to server
         function sendTypingIndicator() {
-            if (currentUser && socket) {
+            if (currentUser && socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({
                     type: 'typing', 
                     username: currentUser
@@ -1229,7 +1246,7 @@
             const chatInput = document.getElementById('chat-input');
             const message = chatInput.value.trim();
             
-            if (message && currentUser && socket) {
+            if (message && currentUser && socket && socket.readyState === WebSocket.OPEN) {
                 const messageData = {
                     type: 'chat_message', 
                     data: {
