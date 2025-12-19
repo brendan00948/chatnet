@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatnet - Live Global Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -625,8 +626,8 @@
                     <img id="header-profile-pic" class="profile-icon" src="" alt="Profile">
                 </div>
                 <div class="connection-status">
-                    <span class="status-dot connected"></span>
-                    <span>Connected</span>
+                    <span class="status-dot" id="connection-status-dot"></span>
+                    <span id="connection-status-text">Connecting...</span>
                 </div>
             </div>
         </div>
@@ -1017,7 +1018,6 @@
         // Simulated user database (in a real app, this would be on a server)
         let registeredCredentials = JSON.parse(localStorage.getItem('registeredCredentials')) || {}; 
         let generatedNumbers = JSON.parse(localStorage.getItem('generatedNumbers')) || []; 
-        let chatMessages = JSON.parse(localStorage.getItem('chatMessages')) || [];
         let announcements = JSON.parse(localStorage.getItem('announcements')) || [];
         let currentUser = null;
         const ownerPassword = "Bb66896769"; // Owner password
@@ -1029,24 +1029,24 @@
         if (Object.keys(registeredCredentials).length === 0) {
             registeredCredentials = {
                 "Brendan": {
-                    password: ownerPassword, 
-                    profilePic: "https://i.pravatar.cc/150?img=1", 
-                    role: "owner", 
-                    banned: false, 
+                    password: ownerPassword,  
+                    profilePic: "https://i.pravatar.cc/150?img=1",  
+                    role: "owner",  
+                    banned: false,  
                     muted: false
-                }, 
+                },  
                 "Admin": {
-                    password: adminPassword, 
-                    profilePic: "https://i.pravatar.cc/150?img=2", 
-                    role: "admin", 
-                    banned: false, 
+                    password: adminPassword,  
+                    profilePic: "https://i.pravatar.cc/150?img=2",  
+                    role: "admin",  
+                    banned: false,  
                     muted: false
-                }, 
+                },  
                 "Moderator": {
-                    password: moderatorPassword, 
-                    profilePic: "https://i.pravatar.cc/150?img=3", 
-                    role: "moderator", 
-                    banned: false, 
+                    password: moderatorPassword,  
+                    profilePic: "https://i.pravatar.cc/150?img=3",  
+                    role: "moderator",  
+                    banned: false,  
                     muted: false
                 }
             };
@@ -1056,13 +1056,50 @@
         // Simulate online users (in a real app, this would come from server)
         let onlineUsers = [];
 
+        // Initialize Socket.IO connection
+        const socket = io('https://chatnet-server.onrender.com'); // Replace with your server URL
+
         document.addEventListener('DOMContentLoaded', function() {
             displayLoginOptions();
             displayGeneratedNumbers(); 
-            displayChatMessages();
             displayAnnouncements();
             updateOnlineUsers();
+            
+            // Set up socket event listeners
+            setupSocketListeners();
         });
+
+        // Set up socket event listeners
+        function setupSocketListeners() {
+            // Connection status
+            socket.on('connect', function() {
+                document.getElementById('connection-status-dot').className = 'status-dot connected';
+                document.getElementById('connection-status-text').textContent = 'Connected';
+                if (currentUser) {
+                    socket.emit('user_join', { username: currentUser, profilePic: registeredCredentials[currentUser].profilePic });
+                }
+            });
+
+            socket.on('disconnect', function() {
+                document.getElementById('connection-status-dot').className = 'status-dot disconnected';
+                document.getElementById('connection-status-text').textContent = 'Disconnected';
+            });
+
+            // Chat messages
+            socket.on('message', function(data) {
+                displayMessage(data);
+            });
+
+            // Online users
+            socket.on('update_users', function(users) {
+                updateOnlineUsersList(users);
+            });
+
+            // Announcements
+            socket.on('announcement', function(data) {
+                displayAnnouncement(data);
+            });
+        }
 
         // Simulate live updates
         setInterval(function() {
@@ -1128,11 +1165,14 @@
                         document.getElementById('staff-portal').style.display = 'block';
                     }
                     
-                    // FIX 1: Give staff access to chat immediately after login
+                    // Give staff access to chat immediately after login
                     displayChatContainer();
                     
                     refreshStats();
                     updateOnlineUsers();
+                    
+                    // Join chat room
+                    socket.emit('user_join', { username: currentUser, profilePic: registeredCredentials[currentUser].profilePic });
                 } else {
                     errorDiv.textContent = 'Insufficient privileges for staff portal';
                     errorDiv.style.display = 'block';
@@ -1159,7 +1199,7 @@
                 if (registeredCredentials[username].banned) {
                     const banInfo = registeredCredentials[username].banInfo || {};
                     const banMessage = banInfo.reason ? 
-                        `Your account has been banned. Reason: ${banInfo.reason}` : 
+                        `Your account has been banned. Reason: ${banInfo.reason}` :  
                         'Your account has been banned.';
                     errorDiv.textContent = banMessage;
                     errorDiv.style.display = 'block';
@@ -1177,6 +1217,9 @@
                 displayChatContainer();
                 errorDiv.style.display = 'none';
                 updateOnlineUsers();
+                
+                // Join chat room
+                socket.emit('user_join', { username: currentUser, profilePic: registeredCredentials[currentUser].profilePic });
             } else {
                 errorDiv.textContent = 'Invalid credentials, please try again.';
                 errorDiv.style.display = 'block';
@@ -1236,10 +1279,10 @@
             reader.onload = function(e) {
                 const profilePicURL = e.target.result;
                 registeredCredentials[regUsername] = { 
-                    password: regPassword, 
-                    profilePic: profilePicURL, 
-                    role: role, 
-                    banned: false, 
+                    password: regPassword,  
+                    profilePic: profilePicURL,  
+                    role: role,  
+                    banned: false,  
                     muted: false
                 };
                 
@@ -1271,6 +1314,9 @@
             document.getElementById('staff-portal').style.display = 'none';
             displayLoginOptions();
             updateOnlineUsers();
+            
+            // Leave chat room
+            socket.emit('user_leave', { username: currentUser });
         }
 
         function displayWelcomeMessage(username) {
@@ -1297,7 +1343,7 @@
                 document.getElementById('staff-portal').style.display = 'block';
             }
             
-            // FIX 1: Ensure staff get chat access when returning to welcome screen
+            // Ensure staff get chat access when returning to welcome screen
             if (userRole === "owner" || userRole === "admin" || userRole === "moderator") {
                 displayChatContainer();
             }
@@ -1345,8 +1391,8 @@
 
         function saveGeneratedNumber(number) {
             generatedNumbers.push({
-                value: number, 
-                timestamp: new Date().toLocaleString(), 
+                value: number,  
+                timestamp: new Date().toLocaleString(),  
                 user: currentUser
             });
             localStorage.setItem('generatedNumbers', JSON.stringify(generatedNumbers)); 
@@ -1396,75 +1442,58 @@
                 const date = new Date().toLocaleString();
                 const profilePicURL = registeredCredentials[username].profilePic;
 
-                const newMessage = { 
-                    name: username, 
-                    date: date, 
-                    message: message, 
-                    profilePic: profilePicURL 
-                };
+                // Send message through socket
+                socket.emit('message', {
+                    name: username,
+                    date: date,
+                    message: message,
+                    profilePic: profilePicURL
+                });
                 
-                chatMessages.push(newMessage);
-                localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
-                
-                displayChatMessages();
                 chatInput.value = ""; 
-                
-                // Simulate live message delivery
-                setTimeout(() => {
-                    displayChatMessages();
-                }, 100);
             }
         }
 
-        function displayChatMessages() {
+        function displayMessage(msg) {
             const chatContainer = document.getElementById('chat-messages');
-            chatContainer.innerHTML = ""; 
             
-            if (chatMessages.length === 0) {
-                chatContainer.innerHTML = '<p>No messages yet. Be the first to send one!</p>';
-                return;
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            
+            // Determine user role
+            let roleBadge = '';
+            if (registeredCredentials[msg.name]) {
+                const role = registeredCredentials[msg.name].role;
+                if (role === "owner") {
+                    roleBadge = '<span class="role-badge badge-owner">Owner</span>';
+                } else if (role === "admin") {
+                    roleBadge = '<span class="role-badge badge-admin">Admin</span>';
+                } else if (role === "moderator") {
+                    roleBadge = '<span class="role-badge badge-moderator">Moderator</span>';
+                } else {
+                    roleBadge = '<span class="role-badge badge-user">User</span>';
+                }
             }
             
-            // Display in reverse order (newest first)
-            chatMessages.slice().reverse().forEach(msg => {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message');
-                
-                // Determine user role
-                let roleBadge = '';
-                if (registeredCredentials[msg.name]) {
-                    const role = registeredCredentials[msg.name].role;
-                    if (role === "owner") {
-                        roleBadge = '<span class="role-badge badge-owner">Owner</span>';
-                    } else if (role === "admin") {
-                        roleBadge = '<span class="role-badge badge-admin">Admin</span>';
-                    } else if (role === "moderator") {
-                        roleBadge = '<span class="role-badge badge-moderator">Moderator</span>';
-                    } else {
-                        roleBadge = '<span class="role-badge badge-user">User</span>';
-                    }
-                }
-                
-                // Format date to "Today at xx:xx" if it's today
-                let displayDate = msg.date;
-                const today = new Date();
-                const messageDate = new Date(msg.date);
-                if (messageDate.toDateString() === today.toDateString()) {
-                    displayDate = `Today at ${messageDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
-                }
-                
-                messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <div class="message-info">
-                            <img class="message-avatar" src="${msg.profilePic}" alt="Avatar">
-                            <strong>${msg.name}</strong> ${roleBadge}
-                        </div>
-                        <span style="color: var(--gray); font-size: 0.9rem;">${displayDate}</span>
+            // Format date to "Today at xx:xx" if it's today
+            let displayDate = msg.date;
+            const today = new Date();
+            const messageDate = new Date(msg.date);
+            if (messageDate.toDateString() === today.toDateString()) {
+                displayDate = `Today at ${messageDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <div class="message-info">
+                        <img class="message-avatar" src="${msg.profilePic}" alt="Avatar">
+                        <strong>${msg.name}</strong> ${roleBadge}
                     </div>
-                    <div class="message-content">${msg.message}</div>
-                `;
-                chatContainer.appendChild(messageDiv);
-            });
+                    <span style="color: var(--gray); font-size: 0.9rem;">${displayDate}</span>
+                </div>
+                <div class="message-content">${msg.message}</div>
+            `;
+            chatContainer.appendChild(messageDiv);
             
             // Scroll to bottom
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -1493,6 +1522,27 @@
                 `;
                 container.appendChild(div);
             });
+        }
+
+        function displayAnnouncement(announcement) {
+            const container = document.getElementById('announcements-container');
+            
+            // Add to announcements array
+            announcements.push(announcement);
+            localStorage.setItem('announcements', JSON.stringify(announcements));
+            
+            // Display the new announcement
+            const div = document.createElement('div');
+            div.className = 'announcement';
+            div.innerHTML = `
+                <div class="announcement-header">
+                    <span>${announcement.title}</span>
+                    <span style="font-size: 0.9rem;">${announcement.date}</span>
+                </div>
+                <div class="announcement-content">${announcement.content}</div>
+                <div style="margin-top: 10px; font-size: 0.8rem; opacity: 0.8;">By ${announcement.author}</div>
+            `;
+            container.insertBefore(div, container.firstChild);
         }
 
         function displayOnlineUsers() {
@@ -1527,6 +1577,46 @@
                 `;
                 userList.appendChild(userDiv);
             });
+        }
+
+        function updateOnlineUsersList(users) {
+            const userList = document.getElementById('online-users-list');
+            userList.innerHTML = '';
+            
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                
+                // Determine user role for display
+                let roleText = registeredCredentials[user.username] ? 
+                    registeredCredentials[user.username].role.charAt(0).toUpperCase() + 
+                    registeredCredentials[user.username].role.slice(1) : 'User';
+                let roleClass = '';
+                if (registeredCredentials[user.username]) {
+                    const role = registeredCredentials[user.username].role;
+                    if (role === "owner") {
+                        roleClass = 'role-owner';
+                    } else if (role === "admin") {
+                        roleClass = 'role-admin';
+                    } else if (role === "moderator") {
+                        roleClass = 'role-moderator';
+                    } else {
+                        roleClass = 'role-user';
+                    }
+                } else {
+                    roleClass = 'role-user';
+                }
+                
+                userDiv.innerHTML = `
+                    <div>
+                        <strong>${user.username}</strong>
+                    </div>
+                    <span class="user-role ${roleClass}">${roleText}</span>
+                `;
+                userList.appendChild(userDiv);
+            });
+            
+            document.getElementById('online-count').textContent = users.length;
         }
 
         // Simulate online users update
@@ -1671,7 +1761,7 @@
             alert(`Password for ${selectedUser} updated successfully!`);
         }
 
-        // User Management Functions (FIX 2)
+        // User Management Functions
         function showUserManagement() {
             const userSelect = document.getElementById('manage-user-select');
             userSelect.innerHTML = '';
@@ -1741,8 +1831,8 @@
                 registeredCredentials[selectedUser].banned = true;
                 // Add ban info
                 registeredCredentials[selectedUser].banInfo = {
-                    reason: "Banned by administrator", 
-                    bannedBy: currentUser, 
+                    reason: "Banned by administrator",  
+                    bannedBy: currentUser,  
                     banDate: new Date().toLocaleString()
                 };
             } else if (newStatus === 'muted') {
@@ -1814,16 +1904,14 @@
             }
             
             const newAnnouncement = {
-                title: title, 
-                content: content, 
-                author: currentUser, 
+                title: title,  
+                content: content,  
+                author: currentUser,  
                 date: new Date().toLocaleString()
             };
             
-            announcements.push(newAnnouncement);
-            localStorage.setItem('announcements', JSON.stringify(announcements));
-            
-            displayAnnouncements();
+            // Send announcement through socket
+            socket.emit('announcement', newAnnouncement);
             
             // Clear form
             document.getElementById('announcement-title').value = '';
@@ -1869,8 +1957,8 @@
                 if (confirm(`Are you sure you want to ban user ${username}?`)) {
                     registeredCredentials[username].banned = true;
                     registeredCredentials[username].banInfo = {
-                        reason: reason || "No reason provided", 
-                        bannedBy: currentUser, 
+                        reason: reason || "No reason provided",  
+                        bannedBy: currentUser,  
                         banDate: new Date().toLocaleString()
                     };
                     localStorage.setItem('registeredCredentials', JSON.stringify(registeredCredentials));
@@ -1913,24 +2001,24 @@
                 // Reinitialize default users
                 registeredCredentials = {
                     "Brendan": {
-                        password: ownerPassword, 
-                        profilePic: "https://i.pravatar.cc/150?img=1", 
-                        role: "owner", 
-                        banned: false, 
+                        password: ownerPassword,  
+                        profilePic: "https://i.pravatar.cc/150?img=1",  
+                        role: "owner",  
+                        banned: false,  
                         muted: false
-                    }, 
+                    },  
                     "Admin": {
-                        password: adminPassword, 
-                        profilePic: "https://i.pravatar.cc/150?img=2", 
-                        role: "admin", 
-                        banned: false, 
+                        password: adminPassword,  
+                        profilePic: "https://i.pravatar.cc/150?img=2",  
+                        role: "admin",  
+                        banned: false,  
                         muted: false
-                    }, 
+                    },  
                     "Moderator": {
-                        password: moderatorPassword, 
-                        profilePic: "https://i.pravatar.cc/150?img=3", 
-                        role: "moderator", 
-                        banned: false, 
+                        password: moderatorPassword,  
+                        profilePic: "https://i.pravatar.cc/150?img=3",  
+                        role: "moderator",  
+                        banned: false,  
                         muted: false
                     }
                 };
@@ -1954,7 +2042,7 @@
 
         // Allow sending message with Enter key
         document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && document.getElementById('chat-input')) {
+            if (e.key === 'Enter' && document.getElementById('chat-input') && document.getElementById('chat-input') === document.activeElement) {
                 sendMessage();
             }
         });
@@ -1982,4 +2070,5 @@
     </script>
 </body>
 </html>
+
 
